@@ -50,8 +50,11 @@ void *client_handler(void *socket_desc) {
     FILE *file;
     int read_size;
 
-    // Receive and authenticate user
-    if ((read_size = recv(sock, client_message, BUFFER_SIZE, 0)) > 0) {
+    memset(client_message, 0, BUFFER_SIZE); // Clear the buffer
+
+    // First, receive and authenticate user
+    if ((read_size = recv(sock, client_message, BUFFER_SIZE - 1, 0)) > 0) {
+        client_message[read_size] = '\0'; // Null-terminate the string
         sscanf(client_message, "%s %s", username, password);
         if (!authenticate(username, password)) {
             printf("Authentication failed for user %s\n", username);
@@ -60,10 +63,17 @@ void *client_handler(void *socket_desc) {
             return 0;
         }
         printf("User %s authenticated successfully.\n", username);
+    } else {
+        close(sock);
+        free(socket_desc);
+        return 0; // Handle errors or disconnections
     }
 
-    // File transfer after authentication
-    if ((read_size = recv(sock, client_message, BUFFER_SIZE, 0)) > 0) {
+    memset(client_message, 0, BUFFER_SIZE); // Clear the buffer again after authentication
+
+    // Receive file transfer data
+    if ((read_size = recv(sock, client_message, BUFFER_SIZE - 1, 0)) > 0) {
+        client_message[read_size] = '\0'; // Null-terminate the string
         sscanf(client_message, "%s %s", directory, filename);
         snprintf(filepath, sizeof(filepath), "%s/%s", directory, filename);
         file = fopen(filepath, "wb");
